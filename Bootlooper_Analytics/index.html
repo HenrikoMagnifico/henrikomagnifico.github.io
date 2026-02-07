@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bootlooper Smart Analytics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <style>
+        :root { 
+            --bg-dark: #0d1117; 
+            --card-bg: #161b22; 
+            --text-main: #f0f6fc; 
+            --text-muted: #8b949e; 
+            --accent: #58a6ff; 
+            --border: #30363d;
+        }
+        body { background-color: var(--bg-dark); color: var(--text-main); font-family: 'Inter', sans-serif; }
+        .card { background-color: var(--card-bg); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.5); margin-bottom: 24px; border-radius: 8px; }
+        .card-header { background-color: #21262d; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 0.95rem; padding: 12px 16px; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; }
+        .chart-wrapper { position: relative; height: 250px; width: 100%; }
+        .chart-wrapper.tall { height: 300px; }
+        .chart-wrapper.short { height: 200px; }
+        .stat-value { font-size: 2.2rem; font-weight: 800; color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.1); }
+        .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 4px; }
+        
+        /* Navbar */
+        .top-bar {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 15px 30px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .upload-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .upload-btn:hover { background-color: #409eff; }
+
+        .file-select {
+            background-color: #0d1117;
+            color: #fff;
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            min-width: 300px;
+        }
+        
+        .table-dark { background-color: var(--card-bg); --bs-table-bg: var(--card-bg); color: #c9d1d9; border-color: var(--border); }
+        .table-dark th { color: var(--text-main); cursor: pointer; border-bottom: 2px solid var(--border); padding: 12px; white-space: nowrap; }
+        .table-dark th:hover { color: var(--accent); background-color: rgba(88, 166, 255, 0.1); }
+        .col-player { min-width: 180px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .badge-room { background: #238636; color: white; border: 1px solid #2ea043; font-weight: 600; }
+        .badge-death { background: #da3633; color: white; border: 1px solid #f85149; }
+        .badge-killer { background: #1f6feb; color: #f0f6fc; border: 1px solid #388bfd; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div class="d-flex align-items-center">
+        <h3 class="fw-bold text-white mb-0 me-4"><i class="bi bi-controller text-primary me-2"></i>Bootlooper</h3>
+        
+        <div id="fileSelectorContainer" style="display:none;" class="d-flex align-items-center">
+            <span class="text-muted me-2 small text-uppercase fw-bold">Select Session:</span>
+            <select id="fileSelect" class="file-select form-select form-select-sm shadow-none"></select>
+        </div>
+    </div>
+    
+    <div>
+        <input type="file" id="folderInput" hidden webkitdirectory multiple>
+        <button class="upload-btn" onclick="document.getElementById('folderInput').click()">
+            <i class="bi bi-folder2-open me-2"></i> Open Data Folder
+        </button>
+    </div>
+</div>
+
+<div class="container-fluid px-5">
+    
+    <div id="emptyState" class="text-center py-5">
+        <div class="display-1 text-muted mb-3"><i class="bi bi-bar-chart-steps"></i></div>
+        <h4 class="text-white">No Data Loaded</h4>
+        <p class="text-muted">Click "Open Data Folder" and select the folder containing your Aptabase CSVs.</p>
+    </div>
+
+    <div id="loading" style="display:none;" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-3 text-white" id="loadingText">Processing files...</p>
+    </div>
+
+    <div id="dashboard" style="display: none;">
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card p-3 h-100 text-center">
+                    <div class="stat-label">Total Runs</div>
+                    <div class="stat-value" id="kpiRuns">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 h-100 text-center">
+                    <div class="stat-label">Avg Duration</div>
+                    <div class="stat-value" style="color: #58a6ff" id="kpiDuration">0m</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 h-100 text-center">
+                    <div class="stat-label">Avg FPS</div>
+                    <div class="stat-value" style="color: #3fb950" id="kpiFps">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3 h-100 text-center">
+                    <div class="stat-label">Avg Cypher</div>
+                    <div class="stat-value" style="color: #d2a8ff" id="kpiCypher">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">💀 Deadliest Rooms</div>
+                    <div class="card-body"><div class="chart-wrapper tall"><canvas id="deathRoomChart"></canvas></div></div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header">🩸 Most Common Killer</div>
+                    <div class="card-body"><div class="chart-wrapper tall"><canvas id="killActorChart"></canvas></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header">⚔️ Core Mods</div>
+                    <div class="card-body"><div class="chart-wrapper"><canvas id="coreModChart"></canvas></div></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header">✨ Abilities</div>
+                    <div class="card-body"><div class="chart-wrapper"><canvas id="abilityChart"></canvas></div></div>
+                </div>
+            </div>
+             <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header">🔫 Gun Mods</div>
+                    <div class="card-body"><div class="chart-wrapper"><canvas id="gunModChart"></canvas></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header">📈 Difficulty Curve (Room #)</div>
+                    <div class="card-body"><div class="chart-wrapper short"><canvas id="progressionChart"></canvas></div></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header">🟣 Economy (Cypher vs Time)</div>
+                    <div class="card-body"><div class="chart-wrapper short"><canvas id="economyChart"></canvas></div></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header">⚠️ Lag Reports</div>
+                    <div class="card-body"><div class="chart-wrapper short"><canvas id="lagChart"></canvas></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-ul me-2"></i> Recent Runs Log</span>
+                <small class="text-muted fw-normal">Click headers to sort</small>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped table-hover mb-0" id="runsTable">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable('timestamp')">Date <i class="bi bi-sort-down"></i></th>
+                                <th class="col-player" onclick="sortTable('playerDisplay')">Player <i class="bi bi-sort-alpha-down"></i></th>
+                                <th onclick="sortTable('deathRoomNum')">Room # <i class="bi bi-sort-numeric-down"></i></th>
+                                <th onclick="sortTable('deathRoom')">Death Room <i class="bi bi-sort-alpha-down"></i></th>
+                                <th onclick="sortTable('killActor')">Killer <i class="bi bi-sort-alpha-down"></i></th>
+                                <th class="text-end" onclick="sortTable('duration')">Duration <i class="bi bi-sort-numeric-down"></i></th>
+                                <th class="text-end" onclick="sortTable('cypher')">Cypher <i class="bi bi-sort-numeric-down"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let globalRunsData = [];
+    let loadoutStats = { core: [], abilities: [], guns: [] };
+    let currentSort = { key: 'timestamp', order: 'desc' };
+    
+    // Stores parsed data from ALL files in memory for fast switching
+    // Format: { id: index, label: "Feb 01, 2026", timestamp: 123456, data: [...] }
+    let datasetCache = []; 
+
+    Chart.defaults.color = '#8b949e';
+    Chart.defaults.borderColor = '#30363d';
+    Chart.defaults.font.family = "'Inter', sans-serif";
+
+    // 1. File Selection Logic
+    document.getElementById('folderInput').addEventListener('change', async function(e) {
+        const files = Array.from(e.target.files);
+        
+        // Loosely filter for text/csv or just blindly try parsing if it looks like a file
+        // We will filter out "bad" files during the parsing stage
+        const csvFiles = files.filter(f => f.name.toLowerCase().endsWith('.csv') || f.type === 'text/csv' || f.type === 'application/vnd.ms-excel');
+
+        if (csvFiles.length === 0) {
+            alert("No CSV files found!");
+            return;
+        }
+
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('loadingText').innerText = `Scanning ${csvFiles.length} files...`;
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+
+        datasetCache = []; // Reset cache
+
+        // Process all files
+        const promises = csvFiles.map(file => parseAndIdentify(file));
+        const results = await Promise.all(promises);
+        
+        // Filter out failures (files that were not valid Aptabase exports)
+        datasetCache = results.filter(r => r !== null);
+
+        // Sort by Recency (Newest Date First)
+        datasetCache.sort((a, b) => b.sortTime - a.sortTime);
+
+        if (datasetCache.length === 0) {
+            alert("None of the selected files contained valid run data.");
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+            return;
+        }
+
+        // Populate Dropdown
+        const select = document.getElementById('fileSelect');
+        select.innerHTML = '';
+        datasetCache.forEach((item, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = item.label;
+            select.appendChild(option);
+        });
+
+        document.getElementById('fileSelectorContainer').style.display = 'flex';
+        
+        // Load the first (newest) file
+        loadFromCache(0);
+    });
+
+    document.getElementById('fileSelect').addEventListener('change', (e) => loadFromCache(e.target.value));
+
+    // 2. Parser that identifies the "Date" of the file
+    function parseAndIdentify(file) {
+        return new Promise((resolve) => {
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const data = results.data;
+                    
+                    // Validation: Does it have essential columns?
+                    if (!data.length || !data[0].timestamp || !data[0].event_name) {
+                        resolve(null); 
+                        return;
+                    }
+
+                    // Find the latest timestamp in this file to use as the "File Date"
+                    let maxTime = 0;
+                    let runCount = 0;
+                    
+                    data.forEach(row => {
+                        if (row.event_name === 'RunEnded') runCount++;
+                        const t = new Date(row.timestamp).getTime();
+                        if (t > maxTime) maxTime = t;
+                    });
+
+                    if (maxTime === 0) { resolve(null); return; } // No valid dates
+
+                    const dateObj = new Date(maxTime);
+                    const label = `📅 ${dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} (${runCount} Runs)`;
+
+                    resolve({
+                        data: data,
+                        sortTime: maxTime,
+                        label: label,
+                        rawName: file.name
+                    });
+                },
+                error: function() { resolve(null); }
+            });
+        });
+    }
+
+    // 3. Load Data into Dashboard
+    function loadFromCache(index) {
+        const item = datasetCache[index];
+        if (!item) return;
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        
+        processData(item.data);
+    }
+
+    // 4. Data Processing (Same Logic as V8/V9)
+    function processData(rawRows) {
+        globalRunsData = [];
+        loadoutStats = { core: [], abilities: [], guns: [] };
+
+        const groupedEvents = {};
+
+        rawRows.forEach(row => {
+            const key = `${row.session_id}_${row.event_name}_${row.timestamp}`;
+            if (!groupedEvents[key]) groupedEvents[key] = { ...row, props: {} };
+            
+            try {
+                if (row.string_props) {
+                    const parsed = JSON.parse(row.string_props);
+                    Object.keys(parsed).forEach(propKey => {
+                        const val = parsed[propKey];
+                        const listFields = ['EquippedAbilityMods', 'EquippedGunMods'];
+                        if (listFields.includes(propKey)) {
+                            if (groupedEvents[key].props[propKey]) {
+                                if (!Array.isArray(groupedEvents[key].props[propKey])) {
+                                    groupedEvents[key].props[propKey] = [groupedEvents[key].props[propKey]];
+                                }
+                                if (!groupedEvents[key].props[propKey].includes(val)) {
+                                    groupedEvents[key].props[propKey].push(val);
+                                }
+                            } else {
+                                groupedEvents[key].props[propKey] = val;
+                            }
+                        } else {
+                            groupedEvents[key].props[propKey] = val;
+                        }
+                    });
+                }
+            } catch (e) { }
+        });
+
+        const events = Object.values(groupedEvents);
+
+        const starts = events.filter(e => e.event_name === 'NewRunStarted');
+        starts.forEach(s => {
+            const p = s.props;
+            if (p.EquippedCoreMods) loadoutStats.core.push(p.EquippedCoreMods);
+            const addToList = (src, dest) => {
+                if (!src) return;
+                if (Array.isArray(src)) src.forEach(i => dest.push(i));
+                else dest.push(src);
+            };
+            addToList(p.EquippedAbilityMods, loadoutStats.abilities);
+            addToList(p.EquippedGunMods, loadoutStats.guns);
+        });
+
+        globalRunsData = events.filter(e => e.event_name === 'RunEnded').map(e => {
+            const props = e.props;
+            let player = props.steamUserID;
+            if (!player || player === 'null' || player.trim() === '') player = e.user_id;
+
+            return {
+                timestamp: e.timestamp,
+                user_id: e.user_id,
+                playerDisplay: player,
+                duration: parseFloat(props.RunDuration || 0),
+                fps: parseFloat(props.AverageFPS || 0),
+                cypher: parseInt(props.CurrencyFound || 0),
+                deathRoom: props.DeathRoomName || 'Unknown',
+                deathRoomNum: parseInt(props.DeathRoomNumber || 0),
+                damageType: props.DiedToDamageType || 'Unknown',
+                killActor: props.KilledByActor || 'Unknown',
+                lagRoom: props.LaggiestRoom || 'None'
+            };
+        });
+
+        updateUI();
+    }
+
+    function updateUI() {
+        updateKPIs(globalRunsData);
+        renderCharts(globalRunsData);
+        renderTable(); 
+    }
+
+    function formatTime(s) { return `${Math.floor(s/60)}m ${Math.round(s%60)}s`; }
+
+    function updateKPIs(runs) {
+        document.getElementById('kpiRuns').innerText = runs.length;
+        document.getElementById('kpiDuration').innerText = runs.length ? formatTime(runs.reduce((a,b)=>a+b.duration,0)/runs.length) : '0m';
+        document.getElementById('kpiFps').innerText = runs.length ? Math.round(runs.reduce((a,b)=>a+b.fps,0)/runs.length) : 0;
+        document.getElementById('kpiCypher').innerText = runs.length ? Math.round(runs.reduce((a,b)=>a+b.cypher,0)/runs.length) : 0;
+    }
+
+    function sortTable(key) {
+        if (currentSort.key === key) currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+        else { currentSort.key = key; currentSort.order = 'desc'; }
+        renderTable();
+    }
+
+    function renderTable() {
+        const tbody = document.querySelector('#runsTable tbody');
+        tbody.innerHTML = '';
+        const sorted = [...globalRunsData].sort((a, b) => {
+            let valA = a[currentSort.key];
+            let valB = b[currentSort.key];
+            if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+            if (currentSort.key === 'timestamp') { valA = new Date(a.timestamp); valB = new Date(b.timestamp); }
+            return (valA < valB ? -1 : 1) * (currentSort.order === 'asc' ? 1 : -1);
+        });
+
+        sorted.slice(0, 50).forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-white">${new Date(r.timestamp).toLocaleDateString()}</td>
+                <td class="col-player" title="${r.playerDisplay}"><i class="bi bi-person-fill text-secondary"></i> ${r.playerDisplay.length > 20 ? r.playerDisplay.substring(0,20)+'...' : r.playerDisplay}</td>
+                <td><span class="badge badge-room">${r.deathRoomNum || '-'}</span></td>
+                <td>${r.deathRoom}</td>
+                <td><span class="badge badge-killer">${r.killActor}</span></td>
+                <td class="text-end text-info fw-bold">${formatTime(r.duration)}</td>
+                <td class="text-end" style="color:#d2a8ff; font-weight:bold;">${r.cypher}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderCharts(runs) {
+        const count = (arr) => {
+            const c = {}; arr.forEach(x => { if(x && x!=='None') c[x] = (c[x]||0)+1; });
+            return Object.entries(c).sort((a,b)=>b[1]-a[1]);
+        };
+        
+        const deathRooms = count(runs.map(r => r.deathRoom));
+        const killActors = count(runs.map(r => r.killActor));
+        const lagRooms = count(runs.map(r => r.lagRoom));
+        const roomNums = runs.map(r => r.deathRoomNum).filter(n => n>0);
+
+        renderBar('deathRoomChart', deathRooms.slice(0,8), 'Deaths', '#da3633');
+        renderBar('killActorChart', killActors.slice(0,8), 'Kills', '#1f6feb');
+        renderPie('coreModChart', count(loadoutStats.core));
+        renderBar('abilityChart', count(loadoutStats.abilities).slice(0,8), 'Used', '#3fb950');
+        renderBar('gunModChart', count(loadoutStats.guns).slice(0,8), 'Equipped', '#d29922');
+        renderLine('progressionChart', roomNums, 'Deaths in Room #');
+        renderScatter('economyChart', runs.map(r => ({x: r.duration, y: r.cypher})), 'Duration', 'Cypher');
+        renderBar('lagChart', lagRooms.slice(0,8), 'Reports', '#f2cc60');
+    }
+
+    function destroyChart(id) { const c = Chart.getChart(id); if(c) c.destroy(); }
+    
+    function renderBar(id, data, label, color) {
+        destroyChart(id);
+        if(!data.length) data = [['No Data', 0]];
+        new Chart(document.getElementById(id), {
+            type: 'bar',
+            data: { labels: data.map(d=>d[0]), datasets: [{ label, data: data.map(d=>d[1]), backgroundColor: color, borderRadius: 4 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+        });
+    }
+
+    function renderPie(id, data) {
+        destroyChart(id);
+        const bg = ['#58a6ff', '#bc8cff', '#ff7b72', '#3fb950', '#d29922', '#db6d28'];
+        new Chart(document.getElementById(id), {
+            type: 'doughnut',
+            data: { labels: data.length?data.map(d=>d[0]):['No Data'], datasets: [{ data: data.length?data.map(d=>d[1]):[1], backgroundColor: data.length?bg:['#30363d'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '55%', plugins: { legend: { position: 'right', labels: { color: '#c9d1d9', boxWidth: 12 } } } }
+        });
+    }
+
+    function renderLine(id, vals, label) {
+        destroyChart(id);
+        const bins = {}; vals.forEach(v => bins[v] = (bins[v]||0)+1);
+        const keys = Object.keys(bins).sort((a,b)=>a-b);
+        new Chart(document.getElementById(id), {
+            type: 'line',
+            data: { labels: keys, datasets: [{ label, data: keys.map(k=>bins[k]), borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.1)', fill: true, tension: 0.3 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } } } }
+        });
+    }
+
+    function renderScatter(id, data, xl, yl) {
+        destroyChart(id);
+        new Chart(document.getElementById(id), {
+            type: 'scatter',
+            data: { datasets: [{ label: 'Run', data, backgroundColor: '#d2a8ff' }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { title: { display: true, text: xl } }, y: { title: { display: true, text: yl } } }, plugins: { legend: { display: false } } }
+        });
+    }
+</script>
+</body>
+</html>
