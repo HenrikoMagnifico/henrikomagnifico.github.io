@@ -3,267 +3,411 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bootlooper Smart Analytics</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>DR. MATBEN | Internal Run Analytics</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    
+
     <style>
-        :root { 
-            --bg-dark: #0d1117; 
-            --card-bg: #161b22; 
-            --text-main: #f0f6fc; 
-            --text-muted: #8b949e; 
-            --accent: #58a6ff; 
-            --border: #30363d;
+        @font-face {
+            font-family: 'DrMatbenFont';
+            src: url('assets/StaticBreachExt.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
         }
-        body { background-color: var(--bg-dark); color: var(--text-main); font-family: 'Inter', sans-serif; }
-        .card { background-color: var(--card-bg); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.5); margin-bottom: 24px; border-radius: 8px; }
-        .card-header { background-color: #21262d; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 0.95rem; padding: 12px 16px; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; }
-        .chart-wrapper { position: relative; height: 250px; width: 100%; }
-        .chart-wrapper.tall { height: 300px; }
-        .chart-wrapper.short { height: 200px; }
-        .stat-value { font-size: 2.2rem; font-weight: 800; color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.1); }
-        .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 4px; }
-        
-        /* Navbar */
-        .top-bar {
-            background-color: var(--card-bg);
-            border-bottom: 1px solid var(--border);
-            padding: 15px 30px;
-            margin-bottom: 30px;
+
+        :root {
+            --bg-base: #030305;
+            --bg-surface: #0a0b10;
+            --bg-card: #0e1017;
+            --text-primary: #ffffff;
+            --text-secondary: #8bc1cc;
+            --text-muted: #52666d;
+            --accent: #83f0ff;
+            --accent-glow: 0 0 25px rgba(131, 240, 255, 0.45);
+            --accent-glow-intense: 0 0 40px rgba(131, 240, 255, 0.8);
+            --font-header: 'DrMatbenFont', 'Orbitron', sans-serif;
+            --font-body: 'DrMatbenFont', sans-serif;
+            --grid-color: rgba(131, 240, 255, 0.02);
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: #1c2331; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); box-shadow: var(--accent-glow); }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image:
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: center;
+        }
+
+        h1, h2, h3, h4, .font-header {
+            font-family: var(--font-header);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(3, 3, 5, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(131, 240, 255, 0.08);
+            z-index: 1000;
+        }
+
+        .logo { font-size: 1.2rem; font-weight: 900; letter-spacing: 3px; font-family: var(--font-header); }
+        .logo span { color: var(--accent); text-shadow: var(--accent-glow); }
+
+        .btn {
+            padding: 12px 24px;
+            background: rgba(3, 3, 5, 0.6);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            font-family: var(--font-header);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            letter-spacing: 1px;
+            box-shadow: 0 0 15px rgba(131, 240, 255, 0.05) inset;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn:hover {
+            background: rgba(131, 240, 255, 0.15);
+            box-shadow: var(--accent-glow), 0 0 15px rgba(131, 240, 255, 0.1) inset;
+            transform: translateY(-2px);
+        }
+        .btn.primary {
+            background: var(--accent);
+            color: var(--bg-base);
+            box-shadow: var(--accent-glow);
+            border: 1px solid var(--accent);
+        }
+        .btn.primary:hover {
+            background: #ffffff;
+            border-color: #ffffff;
+            color: var(--bg-base);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.6);
+        }
+
+        .matben-card {
+            padding: 25px;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.02);
+            position: relative;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .matben-card::before, .matben-card::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .matben-card::before {
+            top: -1px; left: -1px;
+            border-top-color: rgba(131, 240, 255, 0.2);
+            border-left-color: rgba(131, 240, 255, 0.2);
+        }
+        .matben-card::after {
+            bottom: -1px; right: -1px;
+            border-bottom-color: rgba(131, 240, 255, 0.2);
+            border-right-color: rgba(131, 240, 255, 0.2);
+        }
+        .matben-card:hover { transform: translateY(-3px); background: #121520; }
+        .matben-card:hover::before { border-top-color: var(--accent); border-left-color: var(--accent); }
+        .matben-card:hover::after { border-bottom-color: var(--accent); border-right-color: var(--accent); }
+
+        .matben-card h3 {
+            font-size: 1rem;
+            color: var(--accent);
+            margin-bottom: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .upload-btn {
-            background-color: var(--accent);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        .upload-btn:hover { background-color: #409eff; }
-
-        .file-select {
-            background-color: #0d1117;
-            color: #fff;
-            border: 1px solid var(--border);
-            padding: 8px 12px;
-            border-radius: 6px;
-            min-width: 300px;
-        }
         
-        .table-dark { background-color: var(--card-bg); --bs-table-bg: var(--card-bg); color: #c9d1d9; border-color: var(--border); }
-        .table-dark th { color: var(--text-main); cursor: pointer; border-bottom: 2px solid var(--border); padding: 12px; white-space: nowrap; }
-        .table-dark th:hover { color: var(--accent); background-color: rgba(88, 166, 255, 0.1); }
-        .col-player { min-width: 180px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .badge-room { background: #238636; color: white; border: 1px solid #2ea043; font-weight: 600; }
-        .badge-death { background: #da3633; color: white; border: 1px solid #f85149; }
-        .badge-killer { background: #1f6feb; color: #f0f6fc; border: 1px solid #388bfd; font-size: 0.8em; }
+        .kpi-value {
+            font-family: var(--font-header);
+            font-size: 2.2rem;
+            color: var(--text-primary);
+            font-weight: 700;
+            line-height: 1;
+            margin-top: 10px;
+        }
+
+        .select-input {
+            padding: 10px 16px;
+            background: var(--bg-surface);
+            border: 1px solid rgba(131, 240, 255, 0.1);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            min-width: 250px;
+            appearance: none;
+        }
+        .select-input:focus, .select-input:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(131, 240, 255, 0.15);
+            background: var(--bg-card);
+        }
+
+        .table-container { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { 
+            font-family: var(--font-header);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            padding: 15px;
+            border-bottom: 1px solid rgba(131, 240, 255, 0.2);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        th:hover { color: var(--accent); background: rgba(131, 240, 255, 0.05); }
+        td { 
+            padding: 12px 15px; 
+            border-bottom: 1px solid rgba(131, 240, 255, 0.05);
+            color: #a4b7bd;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        tr:hover td { background: rgba(131, 240, 255, 0.03); color: var(--text-primary); }
+
+        .empty-hero {
+            height: 60vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 0 20px;
+        }
+        .empty-hero h2 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            margin-bottom: 15px;
+            font-weight: 900;
+            color: #ffffff;
+            text-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+        }
+        .empty-hero h2 span { color: var(--accent); text-shadow: var(--accent-glow); }
+        .empty-hero p { color: #e0f2f5; max-width: 600px; margin-bottom: 40px; font-weight: 300; }
+        
+        .chart-tall { position: relative; height: 320px; width: 100%; }
+        .chart-mid { position: relative; height: 260px; width: 100%; }
+        .chart-short { position: relative; height: 220px; width: 100%; }
     </style>
 </head>
 <body>
 
-<div class="top-bar">
-    <div class="d-flex align-items-center">
-        <h3 class="fw-bold text-white mb-0 me-4"><i class="bi bi-controller text-primary me-2"></i>Bootlooper</h3>
-        
-        <div id="fileSelectorContainer" style="display:none;" class="d-flex align-items-center">
-            <span class="text-muted me-2 small text-uppercase fw-bold">Select Session:</span>
-            <select id="fileSelect" class="file-select form-select form-select-sm shadow-none"></select>
-        </div>
+<header>
+    <div class="logo">
+        DR. MATBEN <span>ANALYTICS</span>
     </div>
     
-    <div>
-        <input type="file" id="folderInput" hidden webkitdirectory multiple>
-        <button class="upload-btn" onclick="document.getElementById('folderInput').click()">
-            <i class="bi bi-folder2-open me-2"></i> Open Data Folder
+    <div class="flex items-center gap-4">
+        <div id="fileSelectorContainer" style="display:none;" class="flex items-center gap-2 relative">
+            <i class="bi bi-database text-accent absolute left-3 pointer-events-none" style="color: var(--accent)"></i>
+            <select id="fileSelect" class="select-input pl-10 pr-10"></select>
+            <i class="bi bi-chevron-down text-accent absolute right-3 pointer-events-none" style="color: var(--accent)"></i>
+        </div>
+        
+        <input type="file" id="folderInput" webkitdirectory multiple hidden>
+        <button class="btn primary" onclick="document.getElementById('folderInput').click()">
+            <i class="bi bi-folder2-open text-lg"></i>
+            Load CSV Folder
         </button>
     </div>
-</div>
+</header>
 
-<div class="container-fluid px-5">
+<main class="w-full max-w-[1600px] mx-auto px-6 py-10">
     
-    <div id="emptyState" class="text-center py-5">
-        <div class="display-1 text-muted mb-3"><i class="bi bi-bar-chart-steps"></i></div>
-        <h4 class="text-white">No Data Loaded</h4>
-        <p class="text-muted">Click "Open Data Folder" and select the folder containing your Aptabase CSVs.</p>
+    <div id="emptyState" class="empty-hero">
+        <i class="bi bi-bar-chart-steps text-6xl text-accent mb-6" style="filter: drop-shadow(var(--accent-glow))"></i>
+        <h2>NO RUN DATA <span>LOADED</span></h2>
+        <p>Select your telemetry log folder to inspect metrics.</p>
+        <button class="btn" onclick="document.getElementById('folderInput').click()">
+            <i class="bi bi-upload"></i> Browse Local Folder
+        </button>
     </div>
 
-    <div id="loading" style="display:none;" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-3 text-white" id="loadingText">Processing files...</p>
+    <div id="loading" style="display:none;" class="empty-hero">
+        <i class="bi bi-arrow-repeat text-6xl text-accent mb-6 animate-spin"></i>
+        <h2 style="font-size: 2rem;">PARSING <span>LOGS</span></h2>
+        <p id="loadingText">Scanning directory...</p>
     </div>
 
-    <div id="dashboard" style="display: none;">
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="card p-3 h-100 text-center">
-                    <div class="stat-label">Total Runs</div>
-                    <div class="stat-value" id="kpiRuns">0</div>
-                </div>
+    <div id="dashboard" style="display: none;" class="space-y-8">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            <div class="matben-card">
+                <div class="text-muted text-xs font-header tracking-widest">Total Completed Runs</div>
+                <div class="kpi-value" id="kpiRuns">0</div>
             </div>
-            <div class="col-md-3">
-                <div class="card p-3 h-100 text-center">
-                    <div class="stat-label">Avg Duration</div>
-                    <div class="stat-value" style="color: #58a6ff" id="kpiDuration">0m</div>
-                </div>
+            <div class="matben-card">
+                <div class="text-muted text-xs font-header tracking-widest">Average Run Duration</div>
+                <div class="kpi-value" id="kpiDuration">0m 00s</div>
             </div>
-            <div class="col-md-3">
-                <div class="card p-3 h-100 text-center">
-                    <div class="stat-label">Avg FPS</div>
-                    <div class="stat-value" style="color: #3fb950" id="kpiFps">0</div>
-                </div>
+            <div class="matben-card">
+                <div class="text-muted text-xs font-header tracking-widest">Average Framerate</div>
+                <div class="kpi-value" id="kpiFps">0</div>
             </div>
-            <div class="col-md-3">
-                <div class="card p-3 h-100 text-center">
-                    <div class="stat-label">Avg Cypher</div>
-                    <div class="stat-value" style="color: #d2a8ff" id="kpiCypher">0</div>
-                </div>
+            <div class="matben-card">
+                <div class="text-muted text-xs font-header tracking-widest">Average Currency</div>
+                <div class="kpi-value" id="kpiCypher">0</div>
             </div>
         </div>
 
-        <div class="row g-3 mb-3">
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-header">💀 Deadliest Rooms</div>
-                    <div class="card-body"><div class="chart-wrapper tall"><canvas id="deathRoomChart"></canvas></div></div>
-                </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="matben-card">
+                <h3>Death Room Frequency <i class="bi bi-door-closed"></i></h3>
+                <div class="chart-tall"><canvas id="deathRoomChart"></canvas></div>
             </div>
-            <div class="col-lg-6">
-                <div class="card h-100">
-                    <div class="card-header">🩸 Most Common Killer</div>
-                    <div class="card-body"><div class="chart-wrapper tall"><canvas id="killActorChart"></canvas></div></div>
-                </div>
+            <div class="matben-card">
+                <h3>Killer Entity Frequency <i class="bi bi-shield-exclamation"></i></h3>
+                <div class="chart-tall"><canvas id="killActorChart"></canvas></div>
             </div>
         </div>
 
-        <div class="row g-3 mb-3">
-            <div class="col-lg-4">
-                <div class="card h-100">
-                    <div class="card-header">⚔️ Core Mods</div>
-                    <div class="card-body"><div class="chart-wrapper"><canvas id="coreModChart"></canvas></div></div>
-                </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="matben-card">
+                <h3>Core Mods Used <i class="bi bi-cpu"></i></h3>
+                <div class="chart-mid"><canvas id="coreModChart"></canvas></div>
             </div>
-            <div class="col-lg-4">
-                <div class="card h-100">
-                    <div class="card-header">✨ Abilities</div>
-                    <div class="card-body"><div class="chart-wrapper"><canvas id="abilityChart"></canvas></div></div>
-                </div>
+            <div class="matben-card">
+                <h3>Ability Mods Used <i class="bi bi-lightning-charge"></i></h3>
+                <div class="chart-mid"><canvas id="abilityChart"></canvas></div>
             </div>
-             <div class="col-lg-4">
-                <div class="card h-100">
-                    <div class="card-header">🔫 Gun Mods</div>
-                    <div class="card-body"><div class="chart-wrapper"><canvas id="gunModChart"></canvas></div></div>
-                </div>
+             <div class="matben-card">
+                <h3>Gun Mods Used <i class="bi bi-crosshair"></i></h3>
+                <div class="chart-mid"><canvas id="gunModChart"></canvas></div>
             </div>
         </div>
 
-        <div class="row g-3 mb-3">
-            <div class="col-lg-4">
-                <div class="card h-100">
-                    <div class="card-header">📈 Difficulty Curve (Room #)</div>
-                    <div class="card-body"><div class="chart-wrapper short"><canvas id="progressionChart"></canvas></div></div>
-                </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="matben-card">
+                <h3>Deaths by Room Number <i class="bi bi-graph-up"></i></h3>
+                <div class="chart-short"><canvas id="progressionChart"></canvas></div>
             </div>
-            <div class="col-lg-4">
-                <div class="card h-100">
-                    <div class="card-header">🟣 Economy (Cypher vs Time)</div>
-                    <div class="card-body"><div class="chart-wrapper short"><canvas id="economyChart"></canvas></div></div>
-                </div>
+            <div class="matben-card">
+                <h3>Currency vs Duration <i class="bi bi-cash-stack"></i></h3>
+                <div class="chart-short"><canvas id="economyChart"></canvas></div>
             </div>
-            <div class="col-lg-4">
-                <div class="card h-100">
-                    <div class="card-header">⚠️ Lag Reports</div>
-                    <div class="card-body"><div class="chart-wrapper short"><canvas id="lagChart"></canvas></div></div>
-                </div>
+            <div class="matben-card">
+                <h3>Lag Spike Rooms <i class="bi bi-speedometer2"></i></h3>
+                <div class="chart-short"><canvas id="lagChart"></canvas></div>
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-list-ul me-2"></i> Recent Runs Log</span>
-                <small class="text-muted fw-normal">Click headers to sort</small>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-dark table-striped table-hover mb-0" id="runsTable">
-                        <thead>
-                            <tr>
-                                <th onclick="sortTable('timestamp')">Date <i class="bi bi-sort-down"></i></th>
-                                <th class="col-player" onclick="sortTable('playerDisplay')">Player <i class="bi bi-sort-alpha-down"></i></th>
-                                <th onclick="sortTable('deathRoomNum')">Room # <i class="bi bi-sort-numeric-down"></i></th>
-                                <th onclick="sortTable('deathRoom')">Death Room <i class="bi bi-sort-alpha-down"></i></th>
-                                <th onclick="sortTable('killActor')">Killer <i class="bi bi-sort-alpha-down"></i></th>
-                                <th class="text-end" onclick="sortTable('duration')">Duration <i class="bi bi-sort-numeric-down"></i></th>
-                                <th class="text-end" onclick="sortTable('cypher')">Cypher <i class="bi bi-sort-numeric-down"></i></th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+        <div class="matben-card">
+            <h3>Raw Telemetry Log <i class="bi bi-table"></i></h3>
+            <div class="table-container">
+                <table id="runsTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('timestamp')">Timestamp <i class="bi bi-dash" id="sort-timestamp"></i></th>
+                            <th onclick="sortTable('playerDisplay')">Player ID <i class="bi bi-dash" id="sort-playerDisplay"></i></th>
+                            <th onclick="sortTable('deathRoomNum')">Room # <i class="bi bi-dash" id="sort-deathRoomNum"></i></th>
+                            <th onclick="sortTable('deathRoom')">Death Room <i class="bi bi-dash" id="sort-deathRoom"></i></th>
+                            <th onclick="sortTable('killActor')">Killer Entity <i class="bi bi-dash" id="sort-killActor"></i></th>
+                            <th onclick="sortTable('duration')" style="text-align: right;">Duration <i class="bi bi-dash" id="sort-duration"></i></th>
+                            <th onclick="sortTable('cypher')" style="text-align: right;">Currency <i class="bi bi-dash" id="sort-cypher"></i></th>
+                            <th onclick="sortTable('fps')" style="text-align: right;">FPS <i class="bi bi-dash" id="sort-fps"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
         </div>
+
     </div>
-</div>
+</main>
 
 <script>
     let globalRunsData = [];
     let loadoutStats = { core: [], abilities: [], guns: [] };
     let currentSort = { key: 'timestamp', order: 'desc' };
-    
-    // Stores parsed data from ALL files in memory for fast switching
-    // Format: { id: index, label: "Feb 01, 2026", timestamp: 123456, data: [...] }
     let datasetCache = []; 
 
-    Chart.defaults.color = '#8b949e';
-    Chart.defaults.borderColor = '#30363d';
-    Chart.defaults.font.family = "'Inter', sans-serif";
+    const theme = {
+        bgBase: '#030305',
+        bgCard: '#0e1017',
+        textPrimary: '#ffffff',
+        textSecondary: '#8bc1cc',
+        accent: '#83f0ff',
+        gridColor: 'rgba(131, 240, 255, 0.05)'
+    };
 
-    // 1. File Selection Logic
+    Chart.defaults.color = theme.textSecondary;
+    Chart.defaults.font.family = "'DrMatbenFont', sans-serif";
+    Chart.defaults.scale.grid.color = theme.gridColor;
+    Chart.defaults.scale.ticks.color = theme.textSecondary;
+    Chart.defaults.plugins.tooltip.backgroundColor = theme.bgCard;
+    Chart.defaults.plugins.tooltip.titleColor = theme.textPrimary;
+    Chart.defaults.plugins.tooltip.bodyColor = theme.accent;
+    Chart.defaults.plugins.tooltip.borderColor = 'rgba(131, 240, 255, 0.2)';
+    Chart.defaults.plugins.tooltip.borderWidth = 1;
+    Chart.defaults.plugins.tooltip.padding = 12;
+    Chart.defaults.plugins.tooltip.cornerRadius = 0;
+    Chart.defaults.plugins.tooltip.titleFont = { size: 12, family: "'DrMatbenFont', 'Orbitron', sans-serif", weight: 'bold' };
+    Chart.defaults.plugins.tooltip.bodyFont = { size: 13, family: "'DrMatbenFont', sans-serif" };
+
     document.getElementById('folderInput').addEventListener('change', async function(e) {
         const files = Array.from(e.target.files);
-        
-        // Loosely filter for text/csv or just blindly try parsing if it looks like a file
-        // We will filter out "bad" files during the parsing stage
-        const csvFiles = files.filter(f => f.name.toLowerCase().endsWith('.csv') || f.type === 'text/csv' || f.type === 'application/vnd.ms-excel');
+        const csvFiles = files.filter(f => f.name.toLowerCase().endsWith('.csv') || f.type === 'text/csv');
 
-        if (csvFiles.length === 0) {
-            alert("No CSV files found!");
-            return;
-        }
+        if (csvFiles.length === 0) return;
 
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('loadingText').innerText = `Scanning ${csvFiles.length} files...`;
+        document.getElementById('loading').style.display = 'flex';
+        document.getElementById('loadingText').innerText = `Processing ${csvFiles.length} logs...`;
         document.getElementById('dashboard').style.display = 'none';
         document.getElementById('emptyState').style.display = 'none';
 
-        datasetCache = []; // Reset cache
-
-        // Process all files
+        datasetCache = []; 
         const promises = csvFiles.map(file => parseAndIdentify(file));
         const results = await Promise.all(promises);
         
-        // Filter out failures (files that were not valid Aptabase exports)
         datasetCache = results.filter(r => r !== null);
-
-        // Sort by Recency (Newest Date First)
         datasetCache.sort((a, b) => b.sortTime - a.sortTime);
 
         if (datasetCache.length === 0) {
-            alert("None of the selected files contained valid run data.");
             document.getElementById('loading').style.display = 'none';
-            document.getElementById('emptyState').style.display = 'block';
+            document.getElementById('emptyState').style.display = 'flex';
             return;
         }
 
-        // Populate Dropdown
         const select = document.getElementById('fileSelect');
         select.innerHTML = '';
         datasetCache.forEach((item, index) => {
@@ -274,14 +418,11 @@
         });
 
         document.getElementById('fileSelectorContainer').style.display = 'flex';
-        
-        // Load the first (newest) file
         loadFromCache(0);
     });
 
     document.getElementById('fileSelect').addEventListener('change', (e) => loadFromCache(e.target.value));
 
-    // 2. Parser that identifies the "Date" of the file
     function parseAndIdentify(file) {
         return new Promise((resolve) => {
             Papa.parse(file, {
@@ -289,14 +430,8 @@
                 skipEmptyLines: true,
                 complete: function(results) {
                     const data = results.data;
-                    
-                    // Validation: Does it have essential columns?
-                    if (!data.length || !data[0].timestamp || !data[0].event_name) {
-                        resolve(null); 
-                        return;
-                    }
+                    if (!data.length || !data[0].timestamp || !data[0].event_name) { resolve(null); return; }
 
-                    // Find the latest timestamp in this file to use as the "File Date"
                     let maxTime = 0;
                     let runCount = 0;
                     
@@ -306,39 +441,30 @@
                         if (t > maxTime) maxTime = t;
                     });
 
-                    if (maxTime === 0) { resolve(null); return; } // No valid dates
+                    if (maxTime === 0 || runCount === 0) { resolve(null); return; }
 
                     const dateObj = new Date(maxTime);
-                    const label = `📅 ${dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} (${runCount} Runs)`;
+                    const dateStr = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                    const label = `${dateStr} - ${runCount} Runs`;
 
-                    resolve({
-                        data: data,
-                        sortTime: maxTime,
-                        label: label,
-                        rawName: file.name
-                    });
+                    resolve({ data, sortTime: maxTime, label, rawName: file.name });
                 },
                 error: function() { resolve(null); }
             });
         });
     }
 
-    // 3. Load Data into Dashboard
     function loadFromCache(index) {
         const item = datasetCache[index];
         if (!item) return;
-
         document.getElementById('loading').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
-        
         processData(item.data);
     }
 
-    // 4. Data Processing (Same Logic as V8/V9)
     function processData(rawRows) {
         globalRunsData = [];
         loadoutStats = { core: [], abilities: [], guns: [] };
-
         const groupedEvents = {};
 
         rawRows.forEach(row => {
@@ -371,7 +497,7 @@
         });
 
         const events = Object.values(groupedEvents);
-
+        
         const starts = events.filter(e => e.event_name === 'NewRunStarted');
         starts.forEach(s => {
             const p = s.props;
@@ -388,19 +514,17 @@
         globalRunsData = events.filter(e => e.event_name === 'RunEnded').map(e => {
             const props = e.props;
             let player = props.steamUserID;
-            if (!player || player === 'null' || player.trim() === '') player = e.user_id;
+            if (!player || player === 'null' || player.trim() === '') player = e.user_id || 'UNKNOWN_USER';
 
             return {
                 timestamp: e.timestamp,
-                user_id: e.user_id,
                 playerDisplay: player,
                 duration: parseFloat(props.RunDuration || 0),
                 fps: parseFloat(props.AverageFPS || 0),
                 cypher: parseInt(props.CurrencyFound || 0),
-                deathRoom: props.DeathRoomName || 'Unknown',
+                deathRoom: props.DeathRoomName || 'Unknown Room',
                 deathRoomNum: parseInt(props.DeathRoomNumber || 0),
-                damageType: props.DiedToDamageType || 'Unknown',
-                killActor: props.KilledByActor || 'Unknown',
+                killActor: props.KilledByActor || 'Unknown Entity',
                 lagRoom: props.LaggiestRoom || 'None'
             };
         });
@@ -414,22 +538,34 @@
         renderTable(); 
     }
 
-    function formatTime(s) { return `${Math.floor(s/60)}m ${Math.round(s%60)}s`; }
+    function formatTime(s) { 
+        if (isNaN(s)) return '00:00';
+        const m = Math.floor(s/60).toString().padStart(2, '0');
+        const sec = Math.round(s%60).toString().padStart(2, '0');
+        return `${m}m ${sec}s`; 
+    }
 
     function updateKPIs(runs) {
-        document.getElementById('kpiRuns').innerText = runs.length;
-        document.getElementById('kpiDuration').innerText = runs.length ? formatTime(runs.reduce((a,b)=>a+b.duration,0)/runs.length) : '0m';
+        document.getElementById('kpiRuns').innerText = runs.length.toLocaleString();
+        document.getElementById('kpiDuration').innerText = runs.length ? formatTime(runs.reduce((a,b)=>a+b.duration,0)/runs.length) : '00:00';
         document.getElementById('kpiFps').innerText = runs.length ? Math.round(runs.reduce((a,b)=>a+b.fps,0)/runs.length) : 0;
-        document.getElementById('kpiCypher').innerText = runs.length ? Math.round(runs.reduce((a,b)=>a+b.cypher,0)/runs.length) : 0;
+        document.getElementById('kpiCypher').innerText = runs.length ? Math.round(runs.reduce((a,b)=>a+b.cypher,0)/runs.length).toLocaleString() : 0;
     }
 
     function sortTable(key) {
-        if (currentSort.key === key) currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+        if (currentSort.key === key) { currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc'; } 
         else { currentSort.key = key; currentSort.order = 'desc'; }
         renderTable();
     }
 
     function renderTable() {
+        document.querySelectorAll('th i').forEach(icon => icon.className = 'bi bi-dash');
+        const activeIcon = document.getElementById(`sort-${currentSort.key}`);
+        if(activeIcon) {
+            activeIcon.className = currentSort.order === 'asc' ? 'bi bi-caret-up-fill text-accent' : 'bi bi-caret-down-fill text-accent';
+            activeIcon.style.color = 'var(--accent)';
+        }
+
         const tbody = document.querySelector('#runsTable tbody');
         tbody.innerHTML = '';
         const sorted = [...globalRunsData].sort((a, b) => {
@@ -440,16 +576,20 @@
             return (valA < valB ? -1 : 1) * (currentSort.order === 'asc' ? 1 : -1);
         });
 
-        sorted.slice(0, 50).forEach(r => {
+        sorted.slice(0, 100).forEach(r => {
             const tr = document.createElement('tr');
+            const dateStr = new Date(r.timestamp).toLocaleString();
+            const playerShort = r.playerDisplay.length > 20 ? r.playerDisplay.substring(0,20)+'...' : r.playerDisplay;
+
             tr.innerHTML = `
-                <td class="text-white">${new Date(r.timestamp).toLocaleDateString()}</td>
-                <td class="col-player" title="${r.playerDisplay}"><i class="bi bi-person-fill text-secondary"></i> ${r.playerDisplay.length > 20 ? r.playerDisplay.substring(0,20)+'...' : r.playerDisplay}</td>
-                <td><span class="badge badge-room">${r.deathRoomNum || '-'}</span></td>
+                <td class="font-header" style="font-size: 0.75rem">${dateStr}</td>
+                <td title="${r.playerDisplay}">${playerShort}</td>
+                <td class="font-header text-accent">[ ${r.deathRoomNum.toString().padStart(2, '0')} ]</td>
                 <td>${r.deathRoom}</td>
-                <td><span class="badge badge-killer">${r.killActor}</span></td>
-                <td class="text-end text-info fw-bold">${formatTime(r.duration)}</td>
-                <td class="text-end" style="color:#d2a8ff; font-weight:bold;">${r.cypher}</td>
+                <td style="color: var(--text-primary)">${r.killActor}</td>
+                <td style="text-align: right;" class="font-header text-accent">${formatTime(r.duration)}</td>
+                <td style="text-align: right;" class="font-header text-accent">${r.cypher}</td>
+                <td style="text-align: right;">${Math.round(r.fps)}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -466,35 +606,69 @@
         const lagRooms = count(runs.map(r => r.lagRoom));
         const roomNums = runs.map(r => r.deathRoomNum).filter(n => n>0);
 
-        renderBar('deathRoomChart', deathRooms.slice(0,8), 'Deaths', '#da3633');
-        renderBar('killActorChart', killActors.slice(0,8), 'Kills', '#1f6feb');
-        renderPie('coreModChart', count(loadoutStats.core));
-        renderBar('abilityChart', count(loadoutStats.abilities).slice(0,8), 'Used', '#3fb950');
-        renderBar('gunModChart', count(loadoutStats.guns).slice(0,8), 'Equipped', '#d29922');
-        renderLine('progressionChart', roomNums, 'Deaths in Room #');
-        renderScatter('economyChart', runs.map(r => ({x: r.duration, y: r.cypher})), 'Duration', 'Cypher');
-        renderBar('lagChart', lagRooms.slice(0,8), 'Reports', '#f2cc60');
+        renderBar('deathRoomChart', deathRooms.slice(0,10), 'Total Deaths');
+        renderBar('killActorChart', killActors.slice(0,10), 'Player Deaths');
+        renderDoughnut('coreModChart', count(loadoutStats.core));
+        renderBar('abilityChart', count(loadoutStats.abilities).slice(0,6), 'Uses');
+        renderBar('gunModChart', count(loadoutStats.guns).slice(0,6), 'Installs');
+        renderLine('progressionChart', roomNums, 'Deaths');
+        renderScatter('economyChart', runs.map(r => ({x: r.duration, y: r.cypher})), 'Duration (s)', 'Currency');
+        renderBar('lagChart', lagRooms.slice(0,6), 'Occurrences');
     }
 
     function destroyChart(id) { const c = Chart.getChart(id); if(c) c.destroy(); }
     
-    function renderBar(id, data, label, color) {
+    function renderBar(id, data, label) {
         destroyChart(id);
-        if(!data.length) data = [['No Data', 0]];
+        if(!data.length) data = [['NO_DATA', 0]];
         new Chart(document.getElementById(id), {
             type: 'bar',
-            data: { labels: data.map(d=>d[0]), datasets: [{ label, data: data.map(d=>d[1]), backgroundColor: color, borderRadius: 4 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+            data: { 
+                labels: data.map(d=>d[0].length > 18 ? d[0].substring(0,18)+'...' : d[0]), 
+                datasets: [{ 
+                    label, 
+                    data: data.map(d=>d[1]), 
+                    backgroundColor: 'rgba(131, 240, 255, 0.2)', 
+                    borderColor: theme.accent,
+                    borderWidth: 1,
+                    barPercentage: 0.6
+                }] 
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: { display: false } }, 
+                scales: { 
+                    y: { beginAtZero: true, border: {display: false} }, 
+                    x: { grid: { display: false }, border: {color: theme.gridColor} } 
+                }
+            }
         });
     }
 
-    function renderPie(id, data) {
+    function renderDoughnut(id, data) {
         destroyChart(id);
-        const bg = ['#58a6ff', '#bc8cff', '#ff7b72', '#3fb950', '#d29922', '#db6d28'];
+        const bgColors = [
+            'rgba(131, 240, 255, 0.9)', 
+            'rgba(131, 240, 255, 0.5)', 
+            'rgba(131, 240, 255, 0.2)', 
+            'rgba(255,255,255,0.8)', 
+            'rgba(255,255,255,0.4)',
+            'rgba(255,255,255,0.1)'
+        ];
         new Chart(document.getElementById(id), {
             type: 'doughnut',
-            data: { labels: data.length?data.map(d=>d[0]):['No Data'], datasets: [{ data: data.length?data.map(d=>d[1]):[1], backgroundColor: data.length?bg:['#30363d'], borderWidth: 0 }] },
-            options: { responsive: true, maintainAspectRatio: false, cutout: '55%', plugins: { legend: { position: 'right', labels: { color: '#c9d1d9', boxWidth: 12 } } } }
+            data: { 
+                labels: data.length ? data.map(d=>d[0]) : ['NO_DATA'], 
+                datasets: [{ 
+                    data: data.length ? data.map(d=>d[1]) : [1], 
+                    backgroundColor: data.length ? bgColors : [theme.bgCard], 
+                    borderColor: theme.bgBase, borderWidth: 2
+                }] 
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, cutout: '75%', 
+                plugins: { legend: { position: 'right', labels: { color: theme.textPrimary, font: {family: "'DrMatbenFont', sans-serif"} } } }
+            }
         });
     }
 
@@ -504,8 +678,23 @@
         const keys = Object.keys(bins).sort((a,b)=>a-b);
         new Chart(document.getElementById(id), {
             type: 'line',
-            data: { labels: keys, datasets: [{ label, data: keys.map(k=>bins[k]), borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.1)', fill: true, tension: 0.3 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } } } }
+            data: { 
+                labels: keys, 
+                datasets: [{ 
+                    label, data: keys.map(k=>bins[k]), 
+                    borderColor: theme.accent, backgroundColor: 'rgba(131, 240, 255, 0.1)', 
+                    fill: true, tension: 0.1,
+                    pointBackgroundColor: theme.bgBase, pointBorderColor: theme.accent, pointBorderWidth: 2
+                }] 
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: { display: false } }, 
+                scales: { 
+                    x: { grid: { display: false }, border: {color: theme.gridColor} },
+                    y: { border: {display: false} }
+                }
+            }
         });
     }
 
@@ -513,8 +702,21 @@
         destroyChart(id);
         new Chart(document.getElementById(id), {
             type: 'scatter',
-            data: { datasets: [{ label: 'Run', data, backgroundColor: '#d2a8ff' }] },
-            options: { responsive: true, maintainAspectRatio: false, scales: { x: { title: { display: true, text: xl } }, y: { title: { display: true, text: yl } } }, plugins: { legend: { display: false } } }
+            data: { 
+                datasets: [{ 
+                    label: 'Run Profile', data, 
+                    backgroundColor: 'rgba(131, 240, 255, 0.4)', borderColor: theme.accent,
+                    pointRadius: 4, pointHoverRadius: 6, pointStyle: 'rect'
+                }] 
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                scales: { 
+                    x: { title: { display: true, text: xl, color: theme.textSecondary }, border: {color: theme.gridColor} }, 
+                    y: { title: { display: true, text: yl, color: theme.textSecondary }, border: {display: false} } 
+                }, 
+                plugins: { legend: { display: false } }
+            }
         });
     }
 </script>
